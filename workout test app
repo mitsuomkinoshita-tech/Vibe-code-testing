@@ -1,0 +1,278 @@
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Play, Pause, RotateCcw, TrendingUp, Dumbbell } from 'lucide-react';
+
+export default function WorkoutTracker() {
+  const [workouts, setWorkouts] = useState([]);
+  const [currentExercise, setCurrentExercise] = useState('');
+  const [currentWeight, setCurrentWeight] = useState('');
+  const [currentReps, setCurrentReps] = useState('');
+  const [restTime, setRestTime] = useState(90);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [view, setView] = useState('tracker');
+
+  useEffect(() => {
+    let interval;
+    if (isTimerRunning && timerSeconds > 0) {
+      interval = setInterval(() => {
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            setIsTimerRunning(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning, timerSeconds]);
+
+  const addWorkout = () => {
+    if (!currentExercise || !currentWeight || !currentReps) return;
+    
+    const newWorkout = {
+      id: Date.now(),
+      exercise: currentExercise,
+      weight: parseFloat(currentWeight),
+      reps: parseInt(currentReps),
+      date: new Date().toISOString(),
+      volume: parseFloat(currentWeight) * parseInt(currentReps)
+    };
+    
+    setWorkouts([newWorkout, ...workouts]);
+    setCurrentExercise('');
+    setCurrentWeight('');
+    setCurrentReps('');
+  };
+
+  const deleteWorkout = (id) => {
+    setWorkouts(workouts.filter(w => w.id !== id));
+  };
+
+  const startTimer = () => {
+    setTimerSeconds(restTime);
+    setIsTimerRunning(true);
+  };
+
+  const pauseTimer = () => {
+    setIsTimerRunning(false);
+  };
+
+  const resetTimer = () => {
+    setTimerSeconds(restTime);
+    setIsTimerRunning(false);
+  };
+
+  const calculateStats = () => {
+    const exerciseGroups = workouts.reduce((acc, workout) => {
+      if (!acc[workout.exercise]) {
+        acc[workout.exercise] = [];
+      }
+      acc[workout.exercise].push(workout);
+      return acc;
+    }, {});
+
+    return Object.entries(exerciseGroups).map(([exercise, sets]) => {
+      const totalVolume = sets.reduce((sum, set) => sum + set.volume, 0);
+      const maxWeight = Math.max(...sets.map(s => s.weight));
+      const maxReps = Math.max(...sets.filter(s => s.weight === maxWeight).map(s => s.reps));
+      const estimated1RM = maxWeight * (1 + maxReps / 30);
+
+      return {
+        exercise,
+        totalVolume: totalVolume.toFixed(0),
+        estimated1RM: estimated1RM.toFixed(1),
+        totalSets: sets.length
+      };
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const stats = calculateStats();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-xl p-6 mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Dumbbell className="w-8 h-8 text-indigo-600" />
+            <h1 className="text-3xl font-bold text-gray-800">Workout Tracker</h1>
+          </div>
+
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setView('tracker')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                view === 'tracker'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Track Workout
+            </button>
+            <button
+              onClick={() => setView('analytics')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                view === 'analytics'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Analytics
+            </button>
+          </div>
+
+          {view === 'tracker' && (
+            <>
+              <div className="bg-indigo-50 rounded-lg p-4 mb-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-3">Rest Timer</h2>
+                <div className="flex items-center gap-4 mb-3">
+                  <label className="text-sm font-medium text-gray-700">Rest Time (seconds):</label>
+                  <input
+                    type="number"
+                    value={restTime}
+                    onChange={(e) => setRestTime(parseInt(e.target.value) || 0)}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg"
+                    disabled={isTimerRunning}
+                  />
+                </div>
+                <div className="text-4xl font-bold text-indigo-600 mb-4 text-center">
+                  {formatTime(timerSeconds)}
+                </div>
+                <div className="flex gap-2 justify-center">
+                  {!isTimerRunning ? (
+                    <button
+                      onClick={startTimer}
+                      className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                    >
+                      <Play className="w-4 h-4" /> Start
+                    </button>
+                  ) : (
+                    <button
+                      onClick={pauseTimer}
+                      className="flex items-center gap-2 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition"
+                    >
+                      <Pause className="w-4 h-4" /> Pause
+                    </button>
+                  )}
+                  <button
+                    onClick={resetTimer}
+                    className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
+                  >
+                    <RotateCcw className="w-4 h-4" /> Reset
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-3">Log Set</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                  <input
+                    type="text"
+                    placeholder="Exercise (e.g., Bench Press)"
+                    value={currentExercise}
+                    onChange={(e) => setCurrentExercise(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg col-span-1 md:col-span-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Weight (lbs)"
+                    value={currentWeight}
+                    onChange={(e) => setCurrentWeight(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Reps"
+                    value={currentReps}
+                    onChange={(e) => setCurrentReps(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <button
+                  onClick={addWorkout}
+                  className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Add Set
+                </button>
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-3">Recent Sets</h2>
+                {workouts.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No workouts logged yet. Start tracking!</p>
+                ) : (
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {workouts.map((workout) => (
+                      <div
+                        key={workout.id}
+                        className="bg-white border border-gray-200 rounded-lg p-3 flex items-center justify-between hover:shadow-md transition"
+                      >
+                        <div>
+                          <p className="font-semibold text-gray-800">{workout.exercise}</p>
+                          <p className="text-sm text-gray-600">
+                            {workout.weight} lbs × {workout.reps} reps = {workout.volume.toFixed(0)} lbs volume
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(workout.date).toLocaleString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => deleteWorkout(workout.id)}
+                          className="text-red-600 hover:text-red-800 transition"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {view === 'analytics' && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-6 h-6 text-indigo-600" />
+                <h2 className="text-2xl font-semibold text-gray-800">Analytics Dashboard</h2>
+              </div>
+              {stats.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No data yet. Log some workouts to see your analytics!
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {stats.map((stat) => (
+                    <div key={stat.exercise} className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3">{stat.exercise}</h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 mb-1">Total Volume</p>
+                          <p className="text-2xl font-bold text-indigo-600">{stat.totalVolume} lbs</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 mb-1">Est. 1RM</p>
+                          <p className="text-2xl font-bold text-green-600">{stat.estimated1RM} lbs</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600 mb-1">Total Sets</p>
+                          <p className="text-2xl font-bold text-purple-600">{stat.totalSets}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
