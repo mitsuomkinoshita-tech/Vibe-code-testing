@@ -6,6 +6,12 @@ import time
 
 class WorkoutTrackerApp:
     def __init__(self, root):
+        """
+        Initialize the WorkoutTrackerApp, attach it to the given Tk root window, configure the main window, and initialize application state and UI.
+        
+        Parameters:
+            root (tk.Tk): The root Tkinter window that the app will attach to and configure.
+        """
         self.root = root
         self.root.title("Workout Tracker")
         self.root.geometry("800x700")
@@ -20,6 +26,11 @@ class WorkoutTrackerApp:
         
     def create_widgets(self):
         # Header
+        """
+        Constructs the main application user interface including the header and the tabbed layout.
+        
+        Creates a header bar with the app title, instantiates a Notebook (tab control), adds two tabs labeled "Track Workout" and "Analytics", and delegates the detailed population of each tab to create_tracker_tab and create_analytics_tab.
+        """
         header_frame = tk.Frame(self.root, bg="#4f46e5", pady=15)
         header_frame.pack(fill=tk.X)
         
@@ -44,6 +55,20 @@ class WorkoutTrackerApp:
         
     def create_tracker_tab(self, parent):
         # Rest Timer Section
+        """
+        Builds and populates the Tracker tab UI with a rest timer, set-logging inputs, and the recent sets list.
+        
+        Creates and packs three sections into the provided parent widget:
+        - Rest Timer: spinbox to set rest seconds, large timer display, Start/Pause/Reset buttons, and associated state variables.
+        - Log Set: inputs for exercise, weight, and reps, plus an Add Set button.
+        - Recent Sets: a scrollable Listbox showing recorded sets and a Delete Selected button.
+        
+        Parameters:
+            parent (tk.Widget): The container widget (tab frame) where the Tracker UI will be placed.
+        
+        Notes:
+            The method assigns several widgets/state variables to `self` for use by other methods: `rest_time_var`, `timer_label`, `start_btn`, `pause_btn`, `exercise_var`, `weight_var`, `reps_var`, and `workout_listbox`.
+        """
         timer_frame = tk.LabelFrame(parent, text="Rest Timer", font=("Arial", 12, "bold"),
                                    bg="#e0e7ff", padx=15, pady=15)
         timer_frame.pack(fill=tk.X, padx=10, pady=10)
@@ -129,6 +154,16 @@ class WorkoutTrackerApp:
                  padx=15, pady=5).pack(pady=5)
         
     def create_analytics_tab(self, parent):
+        """
+        Create the Analytics tab UI inside the given parent container.
+        
+        Builds a scrollable area titled "Analytics Dashboard", initializes and stores
+        the frame used to host dynamic analytics cards as `self.analytics_frame`, and
+        adds a placeholder `self.no_data_label` shown when there are no workouts.
+        
+        Parameters:
+            parent (tk.Widget): The container (frame or notebook tab) to populate with the analytics UI.
+        """
         header = tk.Label(parent, text="📊 Analytics Dashboard", 
                          font=("Arial", 18, "bold"), bg="#f0f4ff")
         header.pack(pady=20)
@@ -156,11 +191,27 @@ class WorkoutTrackerApp:
         self.no_data_label.pack(pady=50)
         
     def format_time(self, seconds):
+        """
+        Format a duration given in seconds as a minutes:seconds string.
+        
+        Parameters:
+            seconds (int): Total number of seconds (expected >= 0).
+        
+        Returns:
+            str: Time formatted as "M:SS" where minutes have no leading zero and seconds are two digits (e.g., "2:05").
+        """
         mins = seconds // 60
         secs = seconds % 60
         return f"{mins}:{secs:02d}"
         
     def start_timer(self):
+        """
+        Start the rest countdown and update UI state for the timer.
+        
+        Sets the timer duration from the rest-time control, initializes the remaining seconds,
+        marks the timer as running, disables the Start button, enables the Pause button,
+        and begins the countdown.
+        """
         if not self.timer_running:
             self.rest_time = self.rest_time_var.get()
             self.timer_seconds = self.rest_time
@@ -170,6 +221,11 @@ class WorkoutTrackerApp:
             self.run_timer()
             
     def run_timer(self):
+        """
+        Advance the rest countdown by one second and update timer-related UI.
+        
+        If the timer is active and time remains, update the timer display to the current remaining time, decrement the remaining seconds, and schedule the next tick. When the countdown reaches zero, stop the timer, set the Start/Pause button states appropriately, and display "0:00".
+        """
         if self.timer_running and self.timer_seconds > 0:
             self.timer_label.config(text=self.format_time(self.timer_seconds))
             self.timer_seconds -= 1
@@ -181,11 +237,21 @@ class WorkoutTrackerApp:
             self.timer_label.config(text="0:00")
             
     def pause_timer(self):
+        """
+        Pause the active rest countdown timer and update the Start/Pause button states.
+        
+        Stops the running timer so the countdown will not continue, enables the Start button, and disables the Pause button.
+        """
         self.timer_running = False
         self.start_btn.config(state=tk.NORMAL)
         self.pause_btn.config(state=tk.DISABLED)
         
     def reset_timer(self):
+        """
+        Stop and reset the rest timer to the currently selected rest duration.
+        
+        Sets the timer to not running, reads the current rest time from the spinbox, updates the remaining seconds and the timer display, enables the Start button, and disables the Pause button.
+        """
         self.timer_running = False
         self.rest_time = self.rest_time_var.get()
         self.timer_seconds = self.rest_time
@@ -194,6 +260,11 @@ class WorkoutTrackerApp:
         self.pause_btn.config(state=tk.DISABLED)
         
     def add_workout(self):
+        """
+        Add a logged set from the input fields to the app's workout list and refresh the UI.
+        
+        Reads exercise, weight, and reps from the widget variables; if any field is empty shows a warning and aborts, and if weight or reps cannot be parsed shows an error and aborts. On success, creates a workout record with computed `volume` and current timestamp, inserts it at the beginning of `self.workouts`, prepends a formatted entry to the recent-sets Listbox, clears the input fields, and updates the analytics view.
+        """
         exercise = self.exercise_var.get().strip()
         weight_str = self.weight_var.get().strip()
         reps_str = self.reps_var.get().strip()
@@ -231,6 +302,11 @@ class WorkoutTrackerApp:
         self.update_analytics()
         
     def delete_workout(self):
+        """
+        Delete the currently selected workout from the recent sets list and the underlying data.
+        
+        If no item is selected, shows a warning dialog and returns without modifying data. When a selection exists, removes that entry from the listbox and from self.workouts, then refreshes the analytics display.
+        """
         selection = self.workout_listbox.curselection()
         if not selection:
             messagebox.showwarning("No Selection", "Please select a workout to delete!")
@@ -243,6 +319,18 @@ class WorkoutTrackerApp:
         
     def update_analytics(self):
         # Clear previous analytics
+        """
+        Update the analytics area to reflect the current workouts.
+        
+        Clears any existing analytics widgets. If there are no logged workouts, displays a no-data message. Otherwise groups workouts by exercise and, for each exercise, computes:
+        - total_volume: sum of volumes for that exercise
+        - max_weight: maximum weight recorded
+        - max_reps: the reps associated with the max weight
+        - estimated_1rm: calculated as max_weight * (1 + max_reps / 30)
+        - total_sets: count of sets for that exercise
+        
+        Renders a visual "stat card" for each exercise showing the exercise name and the three computed metrics.
+        """
         for widget in self.analytics_frame.winfo_children():
             widget.destroy()
             
